@@ -12,7 +12,10 @@
   "dependencies": {
     "@prisma/client": "^6.0.0",
     "axios": "^1.7.0",
-    "dotenv": "^16.4.0"
+    "chromium": "^3.0.3",
+    "dotenv": "^16.4.0",
+    "puppeteer": "^24.40.0",
+    "puppeteer-core": "^24.40.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

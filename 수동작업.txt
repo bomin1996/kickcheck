@@ -1,0 +1,5 @@
+  1. Supabase 가입 → DATABASE_URL 설정 → npx prisma migrate deploy
+  2. Vercel 연결 → 환경변수 설정 → 배포
+  3. 도메인 kickcheck.kr 구매 → Vercel에 연결
+  4. 구글 서치 콘솔 등록 → 사이트맵 제출
+  5. 애드센스 신청 (트래픽이 어느 정도 쌓인 후)

@@ -5,7 +5,7 @@ import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 import prisma, { upsertBrand, upsertProduct, savePriceSnapshot, saveExchangeRate } from './db';
-import { fetchKreamProducts, fetchKreamPrices, delay } from './sources/kream';
+import { fetchKreamProducts, fetchKreamPrices, delay, closeBrowser } from './sources/kream';
 import { fetchStockXPrices, searchStockX } from './sources/stockx';
 import { fetchUsdToKrw } from './sources/exchange-rate';
 
@@ -60,8 +60,16 @@ async function crawlKream() {
         totalProducts++;
 
         // 사이즈별 가격 수집
-        await delay(1000 + Math.random() * 2000); // 1~3초 랜덤 딜레이
-        const prices = await fetchKreamPrices(kreamProduct.id);
+        await delay(2000 + Math.random() * 3000); // 2~5초 랜덤 딜레이
+        const { prices, styleCode } = await fetchKreamPrices(kreamProduct.id);
+
+        // 스타일코드가 있으면 상품 업데이트
+        if (styleCode && !product.styleCode) {
+          await prisma.product.update({
+            where: { id: product.id },
+            data: { styleCode },
+          });
+        }
 
         for (const price of prices) {
           if (price.buy_price || price.sell_price || price.last_sale_price) {
@@ -79,7 +87,7 @@ async function crawlKream() {
           }
         }
 
-        console.log(`  [${totalProducts}] ${kreamProduct.name} - ${prices.length}개 사이즈`);
+        console.log(`  [${totalProducts}] ${kreamProduct.name} - ${prices.length}개 사이즈 ${styleCode ? `(${styleCode})` : ''}`);
       } catch (error: any) {
         console.error(`  에러: ${kreamProduct.name} - ${error.message}`);
       }
@@ -187,6 +195,7 @@ async function main() {
     console.error('크롤링 실패:', error.message);
     process.exit(1);
   } finally {
+    await closeBrowser();
     await prisma.$disconnect();
   }
 }
