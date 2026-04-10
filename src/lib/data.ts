@@ -124,3 +124,49 @@ export async function getRankingData(limit: number = 20) {
       changePercent: p.change,
     }));
 }
+
+const MOCK_RELEASES = [
+  { date: '2026-04-15', items: [
+    { slug: 'travis-scott-jordan-1-low-og', name: 'Travis Scott x Air Jordan 1 Low OG', brand: 'Jordan', price: 179000, platform: 'SNKRS 래플', type: 'raffle' },
+    { slug: 'new-balance-990v6-grey', name: 'New Balance 990v6 Grey', brand: 'New Balance', price: 259000, platform: 'New Balance 공홈', type: 'general' },
+  ]},
+  { date: '2026-04-18', items: [
+    { slug: 'new-balance-2002r-sea-salt-m2002rhq', name: 'New Balance 2002R "Sea Salt"', brand: 'New Balance', price: 169000, platform: '크림 드로우', type: 'raffle' },
+  ]},
+  { date: '2026-04-20', items: [
+    { slug: 'nike-air-max-1-86-og', name: 'Nike Air Max 1 \'86 OG', brand: 'Nike', price: 189000, platform: 'Nike SNKRS', type: 'fcfs' },
+  ]},
+  { date: '2026-04-25', items: [
+    { slug: 'adidas-yeezy-350-v2-bone', name: 'adidas Yeezy Boost 350 V2 "Bone"', brand: 'adidas', price: 299000, platform: 'adidas Confirmed', type: 'raffle' },
+  ]},
+];
+
+export async function getCalendarData(year: number, month: number) {
+  if (await checkDb()) {
+    const { getReleaseCalendar } = await import('./queries');
+    return getReleaseCalendar(year, month);
+  }
+  return MOCK_RELEASES.filter(r => {
+    const d = new Date(r.date);
+    return d.getFullYear() === year && d.getMonth() + 1 === month;
+  });
+}
+
+export async function getUpcomingReleasesData(limit: number = 5) {
+  if (await checkDb()) {
+    const { getUpcomingReleases } = await import('./queries');
+    const releases = await getUpcomingReleases(limit);
+    return releases.map(r => ({
+      slug: r.product.slug,
+      name: r.product.modelName,
+      brand: r.product.brand.name,
+      date: r.releaseDate.toISOString().split('T')[0],
+      price: r.retailPrice || r.product.retailPrice,
+    }));
+  }
+  // Mock: 다가오는 발매 flatten
+  return MOCK_RELEASES.flatMap(r => r.items.map(item => ({
+    ...item,
+    date: r.date,
+  }))).slice(0, limit);
+}

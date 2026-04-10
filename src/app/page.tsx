@@ -1,10 +1,13 @@
 import Link from 'next/link';
-import { getRankingData } from '@/lib/data';
+import { getRankingData, getUpcomingReleasesData } from '@/lib/data';
 
 export const revalidate = 3600; // 1시간
 
 export default async function HomePage() {
-  const ranking = await getRankingData(6);
+  const [ranking, upcoming] = await Promise.all([
+    getRankingData(6),
+    getUpcomingReleasesData(4),
+  ]);
 
   return (
     <div className="space-y-12">
@@ -48,6 +51,33 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* 다가오는 발매 */}
+      {upcoming.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">다가오는 발매</h2>
+            <Link href="/calendar" className="text-sm text-[var(--accent)] hover:underline">
+              캘린더 보기 &rarr;
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {upcoming.map((item) => (
+              <Link
+                key={item.slug}
+                href={`/products/${item.slug}`}
+                className="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-[var(--accent)] transition-colors"
+              >
+                <div>
+                  <p className="font-medium">{item.name}</p>
+                  <p className="text-sm text-gray-500">출시가 {item.price?.toLocaleString()}원</p>
+                </div>
+                <p className="text-sm font-bold text-[var(--accent)] shrink-0 ml-4">{item.date}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* CTA */}
       <section className="text-center py-8">

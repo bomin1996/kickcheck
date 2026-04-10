@@ -197,3 +197,56 @@ export async function getBrands() {
     orderBy: { name: 'asc' },
   });
 }
+
+/**
+ * 발매 캘린더 (월별)
+ */
+export async function getReleaseCalendar(year: number, month: number) {
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59);
+
+  const releases = await prisma.releaseCalendar.findMany({
+    where: {
+      releaseDate: { gte: startDate, lte: endDate },
+    },
+    include: {
+      product: { include: { brand: true } },
+    },
+    orderBy: { releaseDate: 'asc' },
+  });
+
+  // 날짜별로 그룹핑
+  const grouped = new Map<string, typeof releases>();
+  for (const release of releases) {
+    const dateStr = release.releaseDate.toISOString().split('T')[0];
+    if (!grouped.has(dateStr)) grouped.set(dateStr, []);
+    grouped.get(dateStr)!.push(release);
+  }
+
+  return Array.from(grouped.entries()).map(([date, items]) => ({
+    date,
+    items: items.map((r) => ({
+      slug: r.product.slug,
+      name: r.product.modelName,
+      brand: r.product.brand.name,
+      price: r.retailPrice || r.product.retailPrice,
+      platform: r.platform,
+      type: r.releaseType,
+    })),
+  }));
+}
+
+/**
+ * 다가오는 발매 (오늘 이후)
+ */
+export async function getUpcomingReleases(limit: number = 5) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return prisma.releaseCalendar.findMany({
+    where: { releaseDate: { gte: today } },
+    include: { product: { include: { brand: true } } },
+    orderBy: { releaseDate: 'asc' },
+    take: limit,
+  });
+}
