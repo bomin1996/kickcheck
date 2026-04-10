@@ -3,6 +3,8 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { getProductBySlugData, getSizePricesData, getPriceHistoryData } from '@/lib/data';
 import { notFound } from 'next/navigation';
+import { ProductJsonLd, BreadcrumbJsonLd } from '@/components/seo/JsonLd';
+import AdBanner from '@/components/ads/AdBanner';
 
 const PriceChart = dynamic(() => import('@/components/product/PriceChart'), { ssr: false });
 
@@ -35,8 +37,28 @@ export default async function ProductDetailPage({ params }: Props) {
   const minPrice = sizes.length > 0 ? Math.min(...sizes.filter(s => s.kreamAsk).map(s => s.kreamAsk!)) : null;
   const brandName = typeof product.brand === 'string' ? product.brand : product.brand?.name || '';
 
+  const maxPrice = sizes.length > 0 ? Math.max(...sizes.filter(s => s.kreamAsk).map(s => s.kreamAsk!)) : undefined;
+
   return (
     <div className="space-y-8">
+      <ProductJsonLd
+        name={product.modelName}
+        brand={brandName}
+        image={product.imageUrl}
+        sku={product.styleCode}
+        lowPrice={minPrice || undefined}
+        highPrice={maxPrice}
+        url={`https://kickcheck.kr/products/${product.slug}`}
+      />
+      <BreadcrumbJsonLd items={[
+        { name: '홈', url: 'https://kickcheck.kr' },
+        { name: '전체 상품', url: 'https://kickcheck.kr/products' },
+        { name: product.modelName, url: `https://kickcheck.kr/products/${product.slug}` },
+      ]} />
+
+      {/* 상단 광고 */}
+      <AdBanner slot="top-banner" format="horizontal" />
+
       {/* 브레드크럼 */}
       <nav className="text-sm text-gray-400">
         <Link href="/" className="hover:text-[var(--accent)]">홈</Link>
@@ -85,6 +107,9 @@ export default async function ProductDetailPage({ params }: Props) {
         <h2 className="text-xl font-bold mb-4">시세 추이</h2>
         <PriceChart productId={product.id} initialData={priceHistory} />
       </section>
+
+      {/* 차트 아래 광고 */}
+      <AdBanner slot="mid-content" format="rectangle" />
 
       {/* 사이즈별 가격 */}
       {sizes.length > 0 && (
