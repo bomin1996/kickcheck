@@ -1,46 +1,39 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { getProductBySlugData, getSizePricesData, getPriceHistoryData } from '@/lib/data';
+import { notFound } from 'next/navigation';
 
-// TODO: Phase 2에서 실제 DB 데이터로 교체
-const MOCK_PRODUCT = {
-  modelName: 'Air Jordan 1 Retro High OG "Chicago"',
-  brand: 'Nike',
-  styleCode: 'DZ5485-612',
-  colorway: 'White/Varsity Red-Black',
-  retailPrice: 209000,
-  releaseDate: '2025-10-18',
-};
+const PriceChart = dynamic(() => import('@/components/product/PriceChart'), { ssr: false });
 
-const MOCK_SIZES: { size: string; kreamAsk: number | null; stockxAsk: number | null }[] = [
-  { size: '250', kreamAsk: 410000, stockxAsk: 395000 },
-  { size: '255', kreamAsk: 420000, stockxAsk: 405000 },
-  { size: '260', kreamAsk: 430000, stockxAsk: 415000 },
-  { size: '265', kreamAsk: 450000, stockxAsk: 430000 },
-  { size: '270', kreamAsk: 480000, stockxAsk: 460000 },
-  { size: '275', kreamAsk: 510000, stockxAsk: 490000 },
-  { size: '280', kreamAsk: 530000, stockxAsk: 510000 },
-  { size: '285', kreamAsk: 490000, stockxAsk: 470000 },
-  { size: '290', kreamAsk: 460000, stockxAsk: 440000 },
-  { size: '300', kreamAsk: 440000, stockxAsk: 420000 },
-];
+export const revalidate = 1800; // 30분
 
 type Props = { params: { slug: string } };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  // TODO: Phase 2에서 params.slug로 DB 조회
-  void params;
-  const product = MOCK_PRODUCT;
-  const price = MOCK_SIZES[2]?.kreamAsk;
+  const product = await getProductBySlugData(params.slug);
+  if (!product) return { title: '상품을 찾을 수 없습니다' };
+
+  const sizes = await getSizePricesData(product.id);
+  const minPrice = sizes.length > 0 ? Math.min(...sizes.map(s => s.kreamAsk || Infinity)) : null;
 
   return {
-    title: `${product.modelName} 시세 ${price?.toLocaleString()}원 | 크림 StockX 비교`,
-    description: `${product.modelName} (${product.styleCode}) 크림/StockX 실시간 시세 비교. 사이즈별 가격, 시세 추이 차트. 현재 크림 ${price?.toLocaleString()}원.`,
+    title: `${product.modelName} 시세 ${minPrice ? minPrice.toLocaleString() + '원~' : ''} | 크림 StockX 비교`,
+    description: `${product.modelName} (${product.styleCode}) 크림/StockX 실시간 시세 비교. 사이즈별 가격, 시세 추이 차트.`,
   };
 }
 
-export default function ProductDetailPage({ params }: Props) {
-  void params;
-  const product = MOCK_PRODUCT;
+export default async function ProductDetailPage({ params }: Props) {
+  const product = await getProductBySlugData(params.slug);
+  if (!product) notFound();
+
+  const [sizes, priceHistory] = await Promise.all([
+    getSizePricesData(product.id),
+    getPriceHistoryData(product.id, 30),
+  ]);
+
+  const minPrice = sizes.length > 0 ? Math.min(...sizes.filter(s => s.kreamAsk).map(s => s.kreamAsk!)) : null;
+  const brandName = typeof product.brand === 'string' ? product.brand : product.brand?.name || '';
 
   return (
     <div className="space-y-8">
@@ -56,103 +49,94 @@ export default function ProductDetailPage({ params }: Props) {
       {/* 상품 정보 */}
       <section className="flex flex-col md:flex-row gap-8">
         <div className="md:w-1/2">
-          <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center text-gray-400">
-            상품 이미지
-          </div>
+          {product.imageUrl ? (
+            <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={product.imageUrl} alt={product.modelName} className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center text-gray-400 text-6xl">
+              👟
+            </div>
+          )}
         </div>
         <div className="md:w-1/2 space-y-4">
-          <p className="text-sm text-gray-400">{product.brand}</p>
+          <p className="text-sm text-gray-400">{brandName}</p>
           <h1 className="text-2xl font-bold">{product.modelName}</h1>
           <div className="space-y-1 text-sm text-gray-500">
-            <p>스타일 코드: <span className="text-foreground">{product.styleCode}</span></p>
-            <p>컬러웨이: <span className="text-foreground">{product.colorway}</span></p>
-            <p>출시가: <span className="text-foreground">{product.retailPrice?.toLocaleString()}원</span></p>
-            <p>출시일: <span className="text-foreground">{product.releaseDate}</span></p>
+            {product.styleCode && <p>스타일 코드: <span className="text-foreground font-medium">{product.styleCode}</span></p>}
+            {product.colorway && <p>컬러웨이: <span className="text-foreground">{product.colorway}</span></p>}
+            {product.retailPrice && <p>출시가: <span className="text-foreground">{product.retailPrice.toLocaleString()}원</span></p>}
           </div>
 
-          {/* 현재 최저가 */}
-          <div className="p-4 rounded-xl bg-[var(--accent-light)] border border-[var(--accent)]/20">
-            <p className="text-sm text-gray-500">크림 최저가</p>
-            <p className="text-2xl font-bold text-[var(--accent)]">
-              {MOCK_SIZES[0]?.kreamAsk?.toLocaleString()}원~
-            </p>
-          </div>
+          {minPrice && (
+            <div className="p-4 rounded-xl bg-[var(--accent-light)] border border-[var(--accent)]/20">
+              <p className="text-sm text-gray-500">크림 최저가</p>
+              <p className="text-2xl font-bold text-[var(--accent)]">
+                {minPrice.toLocaleString()}원~
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* 시세 차트 영역 (Phase 2에서 Recharts로 교체) */}
+      {/* 시세 차트 */}
       <section>
         <h2 className="text-xl font-bold mb-4">시세 추이</h2>
-        <div className="flex gap-2 mb-4">
-          {['7일', '30일', '90일', '1년'].map((p) => (
-            <button
-              key={p}
-              className="px-3 py-1 text-sm rounded-full border border-gray-300 dark:border-gray-700 hover:border-[var(--accent)] transition-colors"
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-        <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center text-gray-400">
-          시세 차트 (Phase 2에서 구현)
-        </div>
+        <PriceChart productId={product.id} initialData={priceHistory} />
       </section>
 
       {/* 사이즈별 가격 */}
-      <section>
-        <h2 className="text-xl font-bold mb-4">사이즈별 가격</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-          {MOCK_SIZES.map((s) => {
-            const diff = s.kreamAsk && s.stockxAsk ? s.kreamAsk - s.stockxAsk : null;
-            const diffPercent = diff && s.stockxAsk ? (diff / s.stockxAsk) * 100 : null;
-
-            return (
+      {sizes.length > 0 && (
+        <section>
+          <h2 className="text-xl font-bold mb-4">사이즈별 가격</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+            {sizes.map((s) => (
               <div key={s.size} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-center">
                 <p className="text-sm text-gray-400">{s.size}</p>
                 <p className="font-bold text-sm">{s.kreamAsk?.toLocaleString()}</p>
-                {diffPercent !== null && (
-                  <p className={`text-xs ${diffPercent > 0 ? 'text-[var(--red)]' : 'text-[var(--green)]'}`}>
-                    StockX {diffPercent > 0 ? '+' : ''}{diffPercent.toFixed(1)}%
+                {s.diffPercent !== null && (
+                  <p className={`text-xs ${s.diffPercent > 0 ? 'text-[var(--red)]' : 'text-[var(--green)]'}`}>
+                    StockX {s.diffPercent > 0 ? '+' : ''}{s.diffPercent.toFixed(1)}%
                   </p>
                 )}
               </div>
-            );
-          })}
-        </div>
-        <p className="text-xs text-gray-400 mt-2">* StockX 가격은 환율 적용 기준 (1 USD = 1,350원)</p>
-      </section>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 mt-2">* StockX 가격은 환율 적용 기준</p>
+        </section>
+      )}
 
-      {/* 크림 vs StockX 비교 */}
-      <section>
-        <h2 className="text-xl font-bold mb-4">크림 vs StockX</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left py-3 px-2">사이즈</th>
-                <th className="text-right py-3 px-2 text-[var(--accent)]">크림</th>
-                <th className="text-right py-3 px-2 text-green-600">StockX</th>
-                <th className="text-right py-3 px-2">차이</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MOCK_SIZES.map((s) => {
-                const diff = s.kreamAsk && s.stockxAsk ? s.kreamAsk - s.stockxAsk : null;
-                return (
+      {/* 크림 vs StockX 비교 테이블 */}
+      {sizes.length > 0 && (
+        <section>
+          <h2 className="text-xl font-bold mb-4">크림 vs StockX</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-3 px-2">사이즈</th>
+                  <th className="text-right py-3 px-2 text-[var(--accent)]">크림</th>
+                  <th className="text-right py-3 px-2 text-green-600">StockX</th>
+                  <th className="text-right py-3 px-2">차이</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sizes.map((s) => (
                   <tr key={s.size} className="border-b border-gray-100 dark:border-gray-800">
                     <td className="py-3 px-2 font-medium">{s.size}</td>
                     <td className="py-3 px-2 text-right">{s.kreamAsk?.toLocaleString()}원</td>
                     <td className="py-3 px-2 text-right">{s.stockxAsk?.toLocaleString()}원</td>
-                    <td className={`py-3 px-2 text-right ${diff && diff > 0 ? 'text-[var(--red)]' : 'text-[var(--green)]'}`}>
-                      {diff ? `${diff > 0 ? '+' : ''}${diff.toLocaleString()}원` : '-'}
+                    <td className={`py-3 px-2 text-right ${s.diff && s.diff > 0 ? 'text-[var(--red)]' : 'text-[var(--green)]'}`}>
+                      {s.diff ? `${s.diff > 0 ? '+' : ''}${s.diff.toLocaleString()}원` : '-'}
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

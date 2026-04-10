@@ -1,21 +1,11 @@
 import Link from 'next/link';
+import { getRankingData } from '@/lib/data';
 
-// TODO: Phase 2에서 실제 데이터로 교체
-const MOCK_TRENDING = [
-  { slug: 'air-jordan-1-retro-high-og-chicago', name: 'Air Jordan 1 Retro High OG "Chicago"', brand: 'Nike', price: 430000, change: 5.2 },
-  { slug: 'new-balance-993-grey', name: 'New Balance 993 Grey', brand: 'New Balance', price: 289000, change: -2.1 },
-  { slug: 'nike-dunk-low-panda', name: 'Nike Dunk Low "Panda"', brand: 'Nike', price: 156000, change: 1.8 },
-  { slug: 'adidas-samba-og-white', name: 'adidas Samba OG White', brand: 'adidas', price: 135000, change: -0.5 },
-  { slug: 'nike-air-force-1-low-white', name: 'Nike Air Force 1 Low White', brand: 'Nike', price: 119000, change: 0.3 },
-];
+export const revalidate = 3600; // 1시간
 
-const MOCK_RELEASES = [
-  { slug: 'travis-scott-jordan-1-low-og', name: 'Travis Scott x Air Jordan 1 Low OG', date: '2026-04-15', price: 179000 },
-  { slug: 'new-balance-2002r-sea-salt', name: 'New Balance 2002R "Sea Salt"', date: '2026-04-18', price: 169000 },
-  { slug: 'nike-air-max-1-86-og', name: 'Nike Air Max 1 \'86 OG', date: '2026-04-20', price: 189000 },
-];
+export default async function HomePage() {
+  const ranking = await getRankingData(6);
 
-export default function HomePage() {
   return (
     <div className="space-y-12">
       {/* 히어로 */}
@@ -37,20 +27,20 @@ export default function HomePage() {
           </Link>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {MOCK_TRENDING.map((item, i) => (
+          {ranking.map((item) => (
             <Link
-              key={item.slug}
-              href={`/products/${item.slug}`}
+              key={item.product.slug}
+              href={`/products/${item.product.slug}`}
               className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-[var(--accent)] transition-colors"
             >
-              <span className="text-2xl font-bold text-gray-300 w-8">{i + 1}</span>
+              <span className="text-2xl font-bold text-gray-300 w-8">{item.rank}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-400">{item.brand}</p>
-                <p className="font-medium truncate">{item.name}</p>
+                <p className="text-xs text-gray-400">{item.product.brand.name}</p>
+                <p className="font-medium truncate">{item.product.modelName}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="font-bold">{item.price.toLocaleString()}원</span>
-                  <span className={`text-xs ${item.change > 0 ? 'text-[var(--red)]' : 'text-[var(--green)]'}`}>
-                    {item.change > 0 ? '▲' : '▼'} {Math.abs(item.change)}%
+                  <span className="font-bold">{item.currentPrice.toLocaleString()}원</span>
+                  <span className={`text-xs ${item.changePercent > 0 ? 'text-[var(--red)]' : 'text-[var(--green)]'}`}>
+                    {item.changePercent > 0 ? '▲' : '▼'} {Math.abs(item.changePercent).toFixed(1)}%
                   </span>
                 </div>
               </div>
@@ -59,31 +49,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 다가오는 발매 */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">다가오는 발매</h2>
-          <Link href="/calendar" className="text-sm text-[var(--accent)] hover:underline">
-            캘린더 보기 &rarr;
-          </Link>
-        </div>
-        <div className="space-y-3">
-          {MOCK_RELEASES.map((item) => (
-            <Link
-              key={item.slug}
-              href={`/products/${item.slug}`}
-              className="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-[var(--accent)] transition-colors"
-            >
-              <div>
-                <p className="font-medium">{item.name}</p>
-                <p className="text-sm text-gray-500">출시가 {item.price.toLocaleString()}원</p>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-sm font-bold text-[var(--accent)]">{item.date}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
+      {/* CTA */}
+      <section className="text-center py-8">
+        <Link
+          href="/products"
+          className="inline-block px-6 py-3 bg-[var(--accent)] text-white rounded-full font-medium hover:opacity-90 transition-opacity"
+        >
+          전체 상품 시세 보기
+        </Link>
       </section>
 
       {/* SEO 텍스트 */}

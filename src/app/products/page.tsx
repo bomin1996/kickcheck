@@ -1,41 +1,32 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { getProductsData } from '@/lib/data';
 
 export const metadata: Metadata = {
   title: '전체 상품 - 스니커즈 시세 목록',
   description: '크림, StockX 스니커즈 전체 상품 시세 목록. 브랜드별, 가격별 필터링.',
 };
 
-// TODO: Phase 2에서 실제 데이터로 교체
-const MOCK_PRODUCTS = [
-  { slug: 'air-jordan-1-retro-high-og-chicago', name: 'Air Jordan 1 Retro High OG "Chicago"', brand: 'Nike', price: 430000, styleCode: 'DZ5485-612' },
-  { slug: 'new-balance-993-grey', name: 'New Balance 993 Grey', brand: 'New Balance', price: 289000, styleCode: 'MR993GL' },
-  { slug: 'nike-dunk-low-panda', name: 'Nike Dunk Low "Panda"', brand: 'Nike', price: 156000, styleCode: 'DD1391-100' },
-  { slug: 'adidas-samba-og-white', name: 'adidas Samba OG White', brand: 'adidas', price: 135000, styleCode: 'B75806' },
-  { slug: 'nike-air-force-1-low-white', name: 'Nike Air Force 1 Low White', brand: 'Nike', price: 119000, styleCode: '315122-111' },
-  { slug: 'new-balance-2002r-sea-salt', name: 'New Balance 2002R "Sea Salt"', brand: 'New Balance', price: 198000, styleCode: 'M2002RHQ' },
-];
+export const revalidate = 3600;
 
-const BRANDS = ['전체', 'Nike', 'adidas', 'New Balance', 'Jordan', 'Converse'];
+const BRANDS = ['전체', 'Nike', 'adidas', 'New Balance', 'Jordan', 'ASICS', 'Converse'];
 
-export default function ProductsPage({
+export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: { keyword?: string; brand?: string };
+  searchParams: { keyword?: string; brand?: string; page?: string };
 }) {
   const keyword = searchParams.keyword || '';
   const brand = searchParams.brand || '전체';
+  const page = Number(searchParams.page) || 1;
 
-  const filtered = MOCK_PRODUCTS.filter((p) => {
-    if (keyword && !p.name.toLowerCase().includes(keyword.toLowerCase())) return false;
-    if (brand !== '전체' && p.brand !== brand) return false;
-    return true;
-  });
+  const { products, total } = await getProductsData({ keyword, brand, page, limit: 20 });
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">
         {keyword ? `"${keyword}" 검색 결과` : '전체 상품'}
+        <span className="text-sm text-gray-400 font-normal ml-2">{total}개</span>
       </h1>
 
       {/* 브랜드 필터 */}
@@ -57,24 +48,34 @@ export default function ProductsPage({
 
       {/* 상품 목록 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((product) => (
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        {products.map((product: any) => (
           <Link
             key={product.slug}
             href={`/products/${product.slug}`}
             className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-[var(--accent)] transition-colors"
           >
-            <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg mb-3 flex items-center justify-center text-gray-400 text-sm">
-              이미지
-            </div>
-            <p className="text-xs text-gray-400">{product.brand}</p>
-            <p className="font-medium truncate">{product.name}</p>
+            {product.thumbnailUrl ? (
+              <div className="aspect-square rounded-lg mb-3 overflow-hidden relative bg-gray-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={product.thumbnailUrl} alt={product.modelName} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg mb-3 flex items-center justify-center text-gray-400 text-4xl">
+                👟
+              </div>
+            )}
+            <p className="text-xs text-gray-400">{product.brand?.name || product.brand}</p>
+            <p className="font-medium truncate">{product.modelName}</p>
             <p className="text-xs text-gray-400">{product.styleCode}</p>
-            <p className="font-bold mt-1">{product.price.toLocaleString()}원</p>
+            {product.currentPrice && (
+              <p className="font-bold mt-1">{product.currentPrice.toLocaleString()}원</p>
+            )}
           </Link>
         ))}
       </div>
 
-      {filtered.length === 0 && (
+      {products.length === 0 && (
         <p className="text-center text-gray-400 py-12">검색 결과가 없습니다.</p>
       )}
     </div>

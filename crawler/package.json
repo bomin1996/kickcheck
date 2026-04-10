@@ -1,0 +1,21 @@
+{
+  "name": "kickcheck-crawler",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "crawl": "ts-node src/index.ts",
+    "crawl:kream": "ts-node src/index.ts --source kream",
+    "crawl:exchange": "ts-node src/index.ts --source exchange",
+    "seed": "ts-node src/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.0.0",
+    "axios": "^1.7.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}

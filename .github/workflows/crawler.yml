@@ -1,0 +1,38 @@
+name: Price Crawler
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'  # 4시간마다 실행
+  workflow_dispatch: {}      # 수동 실행
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: crawler/package-lock.json
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Install crawler dependencies
+        run: cd crawler && npm ci
+
+      - name: Run KREAM crawler
+        run: cd crawler && npm run crawl:kream
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Run exchange rate update
+        run: cd crawler && npm run crawl:exchange
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
