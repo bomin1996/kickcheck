@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Brand {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  slug     String    @unique
+  products Product[]
+}
+
+model Product {
+  id           Int       @id @default(autoincrement())
+  brandId      Int
+  brand        Brand     @relation(fields: [brandId], references: [id])
+  modelName    String
+  slug         String    @unique
+  styleCode    String?   @unique
+  colorway     String?
+  retailPrice  Int?
+  releaseDate  DateTime?
+  thumbnailUrl String?
+  imageUrl     String?
+  kreamId      String?   @unique
+  stockxId     String?   @unique
+  category     String    @default("sneakers")
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  prices   PriceSnapshot[]
+  releases ReleaseCalendar[]
+
+  @@index([slug])
+  @@index([releaseDate])
+  @@index([brandId])
+  @@index([isActive, category])
+}
+
+model PriceSnapshot {
+  id            Int      @id @default(autoincrement())
+  productId     Int
+  product       Product  @relation(fields: [productId], references: [id])
+  source        String   // "kream" | "stockx"
+  size          String   // 원본 사이즈 ("260", "US9")
+  sizeKr        String?  // 한국 사이즈 통일값 "260"
+  askPrice      Int?     // 즉시구매가
+  bidPrice      Int?     // 즉시판매가
+  lastSalePrice Int?     // 최근 체결가
+  currency      String   @default("KRW")
+  fetchedAt     DateTime @default(now())
+
+  @@index([productId, source, fetchedAt])
+  @@index([productId, source, size])
+}
+
+model ExchangeRate {
+  id        Int      @id @default(autoincrement())
+  fromCur   String   @default("USD")
+  toCur     String   @default("KRW")
+  rate      Float
+  fetchedAt DateTime @default(now())
+
+  @@index([fetchedAt])
+}
+
+model ReleaseCalendar {
+  id          Int      @id @default(autoincrement())
+  productId   Int
+  product     Product  @relation(fields: [productId], references: [id])
+  releaseDate DateTime
+  retailPrice Int?
+  releaseType String?  // "general" | "raffle" | "fcfs"
+  platform    String?  // "Nike SNKRS", "크림 드로우"
+  isConfirmed Boolean  @default(false)
+
+  @@index([releaseDate])
+  @@unique([productId, platform])
+}
