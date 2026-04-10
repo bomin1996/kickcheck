@@ -5,6 +5,7 @@
   "scripts": {
     "crawl": "ts-node src/index.ts",
     "crawl:kream": "ts-node src/index.ts --source kream",
+    "crawl:stockx": "ts-node src/index.ts --source stockx",
     "crawl:exchange": "ts-node src/index.ts --source exchange",
     "seed": "ts-node src/seed.ts"
   },

@@ -6,6 +6,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 import prisma, { upsertBrand, upsertProduct, savePriceSnapshot, saveExchangeRate } from './db';
 import { fetchKreamProducts, fetchKreamPrices, delay } from './sources/kream';
+import { fetchStockXPrices, searchStockX } from './sources/stockx';
 import { fetchUsdToKrw } from './sources/exchange-rate';
 
 function generateSlug(brandName: string, modelName: string, styleCode?: string): string {
@@ -91,6 +92,75 @@ async function crawlKream() {
   console.log(`\n=== 크림 크롤링 완료: ${totalProducts}개 상품, ${totalPrices}개 가격 (${elapsed}초) ===`);
 }
 
+async function crawlStockX() {
+  console.log('\n=== StockX 크롤링 시작 ===');
+  const startTime = Date.now();
+  let totalPrices = 0;
+
+  // DB에 있는 상품 중 stockxId가 있는 것들의 StockX 가격 수집
+  const products = await prisma.product.findMany({
+    where: { isActive: true, stockxId: { not: null } },
+    select: { id: true, modelName: true, stockxId: true, styleCode: true },
+  });
+
+  // stockxId가 없는 상품은 스타일코드로 검색하여 매칭 시도
+  const unmatchedProducts = await prisma.product.findMany({
+    where: { isActive: true, stockxId: null, styleCode: { not: null } },
+    select: { id: true, modelName: true, styleCode: true },
+    take: 50,
+  });
+
+  for (const product of unmatchedProducts) {
+    if (!product.styleCode) continue;
+    await delay(2000);
+
+    const results = await searchStockX(product.styleCode);
+    if (results.length > 0) {
+      const match = results[0];
+      await prisma.product.update({
+        where: { id: product.id },
+        data: { stockxId: match.id },
+      });
+      products.push({ ...product, stockxId: match.id });
+      console.log(`  [매칭] ${product.modelName} → ${match.id}`);
+    }
+  }
+
+  // 환율 조회
+  const latestRate = await prisma.exchangeRate.findFirst({
+    orderBy: { fetchedAt: 'desc' },
+  });
+  const usdToKrw = latestRate?.rate || 1350;
+
+  for (const product of products) {
+    if (!product.stockxId) continue;
+
+    await delay(2000 + Math.random() * 3000);
+    const prices = await fetchStockXPrices(product.stockxId);
+
+    for (const price of prices) {
+      if (price.askPrice || price.lastSale) {
+        await savePriceSnapshot({
+          productId: product.id,
+          source: 'stockx',
+          size: price.size,
+          sizeKr: price.sizeKr,
+          askPrice: price.askPrice ? Math.round(price.askPrice * usdToKrw) : undefined,
+          bidPrice: price.bidPrice ? Math.round(price.bidPrice * usdToKrw) : undefined,
+          lastSalePrice: price.lastSale ? Math.round(price.lastSale * usdToKrw) : undefined,
+          currency: 'KRW',
+        });
+        totalPrices++;
+      }
+    }
+
+    console.log(`  ${product.modelName} - ${prices.length}개 사이즈`);
+  }
+
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  console.log(`\n=== StockX 크롤링 완료: ${products.length}개 상품, ${totalPrices}개 가격 (${elapsed}초) ===`);
+}
+
 async function crawlExchangeRate() {
   console.log('=== 환율 조회 ===');
   const result = await fetchUsdToKrw();
@@ -104,11 +174,14 @@ async function main() {
     || 'all';
 
   try {
+    if (source === 'exchange' || source === 'all') {
+      await crawlExchangeRate();
+    }
     if (source === 'kream' || source === 'all') {
       await crawlKream();
     }
-    if (source === 'exchange' || source === 'all') {
-      await crawlExchangeRate();
+    if (source === 'stockx' || source === 'all') {
+      await crawlStockX();
     }
   } catch (error: any) {
     console.error('크롤링 실패:', error.message);

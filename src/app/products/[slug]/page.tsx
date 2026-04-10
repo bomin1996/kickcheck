@@ -135,6 +135,14 @@ export default async function ProductDetailPage({ params }: Props) {
               </tbody>
             </table>
           </div>
+          <div className="mt-4 text-center">
+            <Link
+              href={`/compare/${product.slug}`}
+              className="inline-block px-5 py-2 text-sm border border-[var(--accent)] text-[var(--accent)] rounded-full hover:bg-[var(--accent)] hover:text-white transition-colors"
+            >
+              상세 비교 보기 &rarr;
+            </Link>
+          </div>
         </section>
       )}
     </div>
