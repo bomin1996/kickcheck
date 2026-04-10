@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+// 루트 프로젝트의 Prisma Client 사용
+import { PrismaClient } from '../../node_modules/@prisma/client';
 
 const prisma = new PrismaClient();
 
