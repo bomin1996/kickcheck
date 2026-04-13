@@ -15,17 +15,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
-          cache-dependency-path: crawler/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            crawler/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
 
       - name: Generate Prisma Client
         run: npx prisma generate
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Install crawler dependencies
-        run: cd crawler && npm ci
+        run: cd crawler && npm install
 
       - name: Run KREAM crawler
         run: cd crawler && npm run crawl:kream
