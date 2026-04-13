@@ -1,7 +1,10 @@
 // 루트 프로젝트의 Prisma Client 사용
 import { PrismaClient } from '../../node_modules/@prisma/client';
+import { PrismaPg } from '../../node_modules/@prisma/adapter-pg';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
+});
 
 export default prisma;
 
