@@ -5,42 +5,6 @@
 
 import type { PricePoint, SizePrice } from '@/types';
 
-// ============ 공통 타입 ============
-
-export interface RankingItem {
-  rank: number;
-  product: {
-    slug: string;
-    modelName: string;
-    brand: { name: string; slug?: string };
-  };
-  currentPrice: number;
-  priceChange: number;
-  changePercent: number;
-}
-
-export interface CalendarDay {
-  date: string;
-  items: CalendarItem[];
-}
-
-export interface CalendarItem {
-  slug: string;
-  name: string;
-  brand: string;
-  price: number | null;
-  platform: string | null;
-  type: string | null;
-}
-
-export interface UpcomingItem {
-  slug: string;
-  name: string;
-  brand: string;
-  date: string;
-  price: number | null;
-}
-
 // ============ MOCK 데이터 (DB 미연결 시 사용) ============
 
 const MOCK_PRODUCTS = [
@@ -143,7 +107,7 @@ export async function getPriceHistoryData(productId: number, days: number = 30):
   return generateMockPriceHistory(product?.currentPrice || 300000, days);
 }
 
-export async function getRankingData(limit: number = 20): Promise<RankingItem[]> {
+export async function getRankingData(limit: number = 20) {
   if (await checkDb()) {
     const { getRanking } = await import('./queries');
     return getRanking(limit);
@@ -177,7 +141,7 @@ const MOCK_RELEASES = [
   ]},
 ];
 
-export async function getCalendarData(year: number, month: number): Promise<CalendarDay[]> {
+export async function getCalendarData(year: number, month: number) {
   if (await checkDb()) {
     const { getReleaseCalendar } = await import('./queries');
     return getReleaseCalendar(year, month);
@@ -188,7 +152,7 @@ export async function getCalendarData(year: number, month: number): Promise<Cale
   });
 }
 
-export async function getUpcomingReleasesData(limit: number = 5): Promise<UpcomingItem[]> {
+export async function getUpcomingReleasesData(limit: number = 5) {
   if (await checkDb()) {
     const { getUpcomingReleases } = await import('./queries');
     const releases = await getUpcomingReleases(limit);

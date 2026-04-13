@@ -38,3 +38,5 @@ next-env.d.ts
 
 /src/generated/prisma
 crawler/node_modules
+
+.vercel

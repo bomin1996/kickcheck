@@ -10,7 +10,7 @@
     "seed": "ts-node src/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^7.0.0",
+    "@prisma/client": "^6.0.0",
     "axios": "^1.7.0",
     "chromium": "^3.0.3",
     "dotenv": "^16.4.0",
