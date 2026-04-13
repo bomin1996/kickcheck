@@ -3,7 +3,7 @@ import { PrismaClient } from '../../node_modules/@prisma/client';
 import { PrismaPg } from '../../node_modules/@prisma/adapter-pg';
 
 const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
+  adapter: new PrismaPg({ connectionString: process.env.DIRECT_URL || process.env.DATABASE_URL! }),
 });
 
 export default prisma;

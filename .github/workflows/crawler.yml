@@ -34,8 +34,10 @@ jobs:
         run: cd crawler && npm run crawl:kream
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
       - name: Run exchange rate update
         run: cd crawler && npm run crawl:exchange
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
