@@ -50,7 +50,7 @@ export default async function CalendarPage() {
               </div>
 
               <div className="space-y-2 pl-[60px]">
-                {day.items.map((item: { slug: string; name: string; brand: string; price: number | null; platform: string | null; type: string | null }) => (
+                {day.items.map((item) => (
                   <Link
                     key={item.slug}
                     href={`/products/${item.slug}`}
