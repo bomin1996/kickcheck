@@ -192,7 +192,7 @@ async function main() {
       await crawlStockX();
     }
   } catch (error: any) {
-    console.error('크롤링 실패:', error.message);
+    console.error('크롤링 실패:', error);
     process.exit(1);
   } finally {
     await closeBrowser();
